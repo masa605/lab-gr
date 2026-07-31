@@ -1,0 +1,262 @@
+"""
+Lab_gr.py
+愛犬ラブラドール・レトリバー「ろみ」のための給餌量計算・栄養管理 Streamlit Web アプリケーション
+"""
+
+import streamlit as st
+import pandas as pd
+
+# モジュールインポート
+from modules.calc import (
+    calculate_rer,
+    calculate_der,
+    calculate_food_gram,
+    calculate_blend_amounts,
+    calculate_blend_ratio_for_target
+)
+from modules.google_sheets import load_masters_from_sheets
+from modules.ui_helpers import (
+    render_disclaimer,
+    render_kpi_metrics,
+    render_calorie_gauge,
+    render_blend_pie_chart
+)
+
+# 1. ページ基本設定
+st.set_page_config(
+    page_title="Lab_gr - ラブラドール給餌量計算",
+    page_icon="🐶",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# カスタムCSSスタイリング
+st.markdown("""
+<style>
+    /* メインヘッダー */
+    .main-header {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #1E3A8A;
+        margin-bottom: 0.2rem;
+    }
+    .sub-header {
+        font-size: 1.0rem;
+        color: #4B5563;
+        margin-bottom: 1.5rem;
+    }
+    /* カード風スタイル */
+    .stMetric {
+        background-color: #F8FAFC;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+def main():
+    # データ読み込み
+    food_df, breed_df, is_live = load_masters_from_sheets()
+
+    # ヘッダー
+    st.markdown('<div class="main-header">🐶 Lab_gr — 愛犬給餌量計算</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sub-header">愛犬ろみ（ラブラドール・レトリバー）のための科学的カロリー＆フード量シミュレーター</div>',
+        unsafe_allow_html=True
+    )
+    
+    # ライブ接続ステータス表示
+    if is_live:
+        st.caption("🟢 **Google Sheets ライブ連携中** (food_master / breed_master)")
+    else:
+        st.caption("ℹ️ **デモモード動作中** (ローカルマスターデータを使用中)")
+
+    render_disclaimer()
+    st.markdown("---")
+
+    # ----------------------------------------------------
+    # サイドバー: プロフィール＆フード設定
+    # ----------------------------------------------------
+    st.sidebar.header("🐾 愛犬プロフィール")
+    
+    dog_name = st.sidebar.text_input("愛犬のお名前", value="ろみ")
+    weight_kg = st.sidebar.number_input(
+        "現在の体重 (kg)",
+        min_value=1.0,
+        max_value=60.0,
+        value=30.0,
+        step=0.5,
+        help="ラブラドールレトリバーの標準体重目安: 25kg〜36kg"
+    )
+
+    # ライフステージ選択 (breed_dfより)
+    stage_options = breed_df["stage_name"].tolist() if "stage_name" in breed_df.columns else []
+    selected_stage_name = st.sidebar.selectbox(
+        "ライフステージ / 状態",
+        options=stage_options,
+        index=2 if len(stage_options) > 2 else 0, # デフォルト「肥満傾向・減量中」
+        help="生活環境や体調に応じた係数を選択してください"
+    )
+    
+    # 選択されたステージの係数取得
+    selected_stage_row = breed_df[breed_df["stage_name"] == selected_stage_name].iloc[0]
+    stage_factor = float(selected_stage_row["factor"])
+    st.sidebar.info(f"💡 係数: **{stage_factor:.1f}** ({selected_stage_row.get('description', '')})")
+
+    meals_per_day = st.sidebar.slider(
+        "1日の食事回数",
+        min_value=1,
+        max_value=4,
+        value=2,
+        help="1回あたりの給餌量を自動計算します"
+    )
+
+    st.sidebar.markdown("---")
+    st.sidebar.header("🥣 フード設定")
+
+    # フードブレンド切り替え
+    is_blend_mode = st.sidebar.toggle("2種類のフードをブレンドする", value=False)
+
+    # フード選択肢作成 (ブランド名 + フード名)
+    food_df["full_name"] = food_df["brand_name"] + " - " + food_df["food_name"]
+    food_list = food_df["full_name"].tolist()
+
+    if not is_blend_mode:
+        # 単一フードモード
+        selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
+        food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
+        kcal_a = float(food_a_row["kcal_per_100g"])
+        
+        st.sidebar.caption(f"エネルギー: **{kcal_a} kcal/100g**")
+        if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
+            st.sidebar.caption(f"タンパク質: {food_a_row['protein_pct']}% / 脂質: {food_a_row['fat_pct']}%")
+
+    else:
+        # ブレンドモード
+        selected_food_a_name = st.sidebar.selectbox("メインフード (フードA)", options=food_list, index=0)
+        food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
+        kcal_a = float(food_a_row["kcal_per_100g"])
+
+        selected_food_b_name = st.sidebar.selectbox("サブフード / トッピング (フードB)", options=food_list, index=1 if len(food_list) > 1 else 0)
+        food_b_row = food_df[food_df["full_name"] == selected_food_b_name].iloc[0]
+        kcal_b = float(food_b_row["kcal_per_100g"])
+
+        ratio_a_pct = st.sidebar.slider(
+            "フードAの重量割合 (%)",
+            min_value=0,
+            max_value=100,
+            value=70,
+            step=5,
+            help="フードAの配合パーセンテージ"
+        )
+
+    # ----------------------------------------------------
+    # 計算処理実行
+    # ----------------------------------------------------
+    rer = calculate_rer(weight_kg)
+    der = calculate_der(rer, stage_factor)
+
+    if not is_blend_mode:
+        total_gram = calculate_food_gram(der, kcal_a)
+        gram_per_meal = total_gram / meals_per_day
+    else:
+        blend_res = calculate_blend_amounts(der, kcal_a, kcal_b, ratio_a_pct)
+        total_gram = blend_res["total_gram"]
+        gram_per_meal = total_gram / meals_per_day
+
+    # ----------------------------------------------------
+    # メイン画面: BIG KPI
+    # ----------------------------------------------------
+    st.subheader(f"📊 {dog_name}ちゃんの給餌シミュレーション結果")
+    render_kpi_metrics(total_gram, der, rer, meals_per_day, gram_per_meal)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ----------------------------------------------------
+    # タブ切り替え表示
+    # ----------------------------------------------------
+    tab1, tab2, tab3 = st.tabs(["📈 カロリー＆給餌分析", "🔀 ブレンドシミュレーター", "🗂️ マスターデータ"])
+
+    with tab1:
+        col_left, col_right = st.columns([1.2, 1])
+
+        with col_left:
+            st.markdown("#### 1日エネルギー要求量 (DER) ゲージ")
+            gauge_fig = render_calorie_gauge(der, rer)
+            st.plotly_chart(gauge_fig, use_container_width=True)
+
+        with col_right:
+            st.markdown("#### 📋 1日あたりの給餌サマリー")
+            st.write(f"- **対象愛犬**: {dog_name} (体重 {weight_kg} kg)")
+            st.write(f"- **選択ライフステージ**: {selected_stage_name}")
+            st.write(f"- **安静時エネルギー要求量 (RER)**: `{rer:.1f} kcal/日`")
+            st.write(f"- **1日必要エネルギー量 (DER)**: `{der:.1f} kcal/日`")
+            st.write(f"- **1日合計推奨給餌量**: **`{total_gram:.1f} g`**")
+            st.write(f"- **1回あたり給餌量 ({meals_per_day}回/日)**: **`{gram_per_meal:.1f} g`**")
+
+            if is_blend_mode:
+                st.markdown("---")
+                st.write(f"• **フードA ({food_a_row['food_name']})**: `{blend_res['gram_a']} g` ({blend_res['kcal_a']} kcal)")
+                st.write(f"• **フードB ({food_b_row['food_name']})**: `{blend_res['gram_b']} g` ({blend_res['kcal_b']} kcal)")
+
+    with tab2:
+        st.markdown("### 🔀 2種フードのブレンド給餌詳細")
+        
+        if not is_blend_mode:
+            st.info("💡 サイドバーの「2種類のフードをブレンドする」トグルをオンにすると、ここで詳細なシミュレーションが行えます。")
+        else:
+            col_b1, col_b2 = st.columns([1, 1])
+
+            with col_b1:
+                pie_fig = render_blend_pie_chart(
+                    food_a_row['food_name'],
+                    blend_res['gram_a'],
+                    food_b_row['food_name'],
+                    blend_res['gram_b']
+                )
+                st.plotly_chart(pie_fig, use_container_width=True)
+
+            with col_b2:
+                st.markdown("#### 🎯 目標カロリー密度からの自動逆算")
+                st.caption("特定のリハビリ・ダイエット用目標カロリー密度 (kcal/100g) からブレンド比率を逆算します。")
+                
+                min_kcal = min(kcal_a, kcal_b)
+                max_kcal = max(kcal_a, kcal_b)
+                default_target = round((kcal_a + kcal_b) / 2.0, 1)
+
+                target_kcal = st.slider(
+                    "目標カロリー密度 (kcal/100g)",
+                    min_value=float(min_kcal),
+                    max_value=float(max_kcal),
+                    value=float(default_target),
+                    step=1.0
+                )
+
+                calculated_ratio_a = calculate_blend_ratio_for_target(kcal_a, kcal_b, target_kcal)
+                target_blend_res = calculate_blend_amounts(der, kcal_a, kcal_b, calculated_ratio_a)
+
+                st.success(
+                    f"**逆算結果**: 目標 `{target_kcal} kcal/100g` を達成するためのフードA割合は "
+                    f"**`{calculated_ratio_a:.1f} %`** です。\n\n"
+                    f"- フードA ({food_a_row['food_name']}): **{target_blend_res['gram_a']} g**\n"
+                    f"- フードB ({food_b_row['food_name']}): **{target_blend_res['gram_b']} g**\n"
+                    f"- 1日合計: **{target_blend_res['total_gram']} g**"
+                )
+
+    with tab3:
+        st.markdown("### 🗂️ マスターデータ（food_master / breed_master）")
+        
+        tab_sub1, tab_sub2 = st.tabs(["🍖 ドッグフードマスター", "🐕 犬種・ライフステージマスター"])
+        
+        with tab_sub1:
+            st.dataframe(food_df, use_container_width=True)
+            
+        with tab_sub2:
+            st.dataframe(breed_df, use_container_width=True)
+
+
+if __name__ == "__main__":
+    main()
