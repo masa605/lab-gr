@@ -1,5 +1,6 @@
 # Secret configs
-.streamlit/secrets.toml
+.streamlit/secrets.toml*
+!.streamlit/secrets.toml.example
 
 # Python cache & virtual environment
 __pycache__/
