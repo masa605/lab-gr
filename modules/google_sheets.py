@@ -145,6 +145,10 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         breed_df = pd.DataFrame(breed_records)
         if "factor" in breed_df.columns:
             breed_df["factor"] = pd.to_numeric(breed_df["factor"], errors="coerce")
+            
+            #成功した証拠を画面に出す
+            st.success("✅ スプレッドシートからのデータ読み込みに成功しました！")
+
 
         return food_df, breed_df, True
 
