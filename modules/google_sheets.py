@@ -149,6 +149,8 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         return food_df, breed_df, True
 
     except Exception as e:
+        st.error(f" ⚠️　スプレッドシート通信エラー:  {e}")
+        
         # エラー発生時はメッセージをスタックせずにフォールバックを返す
         st.sidebar.warning(f"Google Sheets接続エラー（デモ用ローカルデータを使用中）: {e}")
         return FALLBACK_FOOD_MASTER, FALLBACK_BREED_MASTER, False
