@@ -158,8 +158,8 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         st.error(f" ⚠️　スプレッドシート通信エラーの種類: {type(e).__name__}")
         
         # 裏側の黒い画面に全ての原因を吐き出す
-        print("🔥🔥🔥 エラー詳細🔥🔥🔥")
-        print(traceback.format_exc())
+        # print("🔥🔥🔥 エラー詳細🔥🔥🔥")
+        # print(traceback.format_exc())
         
         # エラー発生時はメッセージをスタックせずにフォールバックを返す
         st.sidebar.warning(f"Google Sheets接続エラー（デモ用ローカルデータを使用中）: {e}")
