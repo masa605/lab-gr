@@ -155,7 +155,7 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
     except Exception as e:
         import traceback
         # 画面にはエラーの詳細ではなく、「種類（名前）だけを出す
-        st.error(f" ⚠️　スプレッドシート通信エラーの種類{type(e).__name__}")
+        st.error(f" ⚠️　スプレッドシート通信エラーの種類: {type(e).__name__}")
         
         # 裏側の黒い画面に全ての原因を吐き出す
         print("🔥🔥🔥 エラー詳細🔥🔥🔥")
