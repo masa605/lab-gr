@@ -153,17 +153,17 @@ def main():
             help="フードAの配合パーセンテージ"
         )
         
-from modules.google_sheets import add_new_food_to_sheet    
+    from modules.google_sheets import add_new_food_to_sheet    
 
-# ------------------------------------
- # ⚙️ 管理者専用：データ入力自動化UI
-# ------------------------------------
-st.sidebar.markdown("---")
-if st.sidebar.checkbox("⚙️ 管理者モードを起動"):
-    st.subheader("📝 新規ペットフードのスピード登録")
-    st.info("ここで登録したデータは、即座にGoogleスプレッドシートの最下段に追記され、アプリにも反映されます。")
+    # ------------------------------------
+    # ⚙️ 管理者専用：データ入力自動化UI
+    # ------------------------------------
+    st.sidebar.markdown("---")
+    if st.sidebar.checkbox("⚙️ 管理者モードを起動"):
+        st.subheader("📝 新規ペットフードのスピード登録")
+        st.info("ここで登録したデータは、即座にGoogleスプレッドシートの最下段に追記され、アプリにも反映されます。")
     
-    with st.form("admin_data_entry"):
+        with st.form("admin_data_entry"):
         col1, col2 = st.columns(2)
         with col1:
             input_brand = st.text_input("ブランド名 (Brand)", placeholder="例: Royal Canin")
