@@ -152,6 +152,43 @@ def main():
             step=5,
             help="フードAの配合パーセンテージ"
         )
+        
+    from modules.google_sheets import add_new_food_to_sheet    
+
+    # ------------------------------------
+    # ⚙️ 管理者専用：データ入力自動化UI
+    # ------------------------------------
+    st.sidebar.markdown("---")
+    if st.sidebar.checkbox("⚙️ 管理者モードを起動"):
+        st.subheader("📝 新規ペットフードのスピード登録")
+    st.info("ここで登録したデータは、即座にGoogleスプレッドシートの最下段に追記され、アプリにも反映されます。")
+    
+    with st.form("admin_data_entry"):
+        col1, col2 = st.columns(2)
+        with col1:
+            input_brand = st.text_input("ブランド名 (Brand)", placeholder="例: Royal Canin")
+            input_product = st.text_input("商品名 (Product Name)", placeholder="例: 消化器サポート")
+            input_price = st.number_input("価格 (Price)", min_value=0, value=0)
+        with col2:
+            input_kcal = st.number_input("カロリー/100g (kcal)", min_value=0.0, value=350.0)
+            input_protein = st.number_input("タンパク質 % (Protein)", min_value=0.0, value=20.0)
+            input_fat = st.number_input("脂質 % (Fat)", min_value=0.0, value=10.0)
+            
+        submit_btn = st.form_submit_button("🚀 スプレッドシートに登録")
+        
+        if submit_btn:
+            if input_brand and input_product:
+                # スプレッドシートの列順に合わせてリスト化する（※実際の列順に合わせて調整してください）
+                new_row = [input_brand, input_product, input_price, input_kcal, input_protein, input_fat]
+                
+                with st.spinner("スプレッドシートへ書き込み中..."):
+                    success = add_new_food_to_sheet(new_row)
+                    
+                if success:
+                    st.success(f"✅ 「{input_product}」をマスターDBに登録しました！")
+            else:
+                st.warning("ブランド名と商品名は必須です。")
+                
 
     # ----------------------------------------------------
     # 計算処理実行
