@@ -153,7 +153,7 @@ def main():
             help="フードAの配合パーセンテージ"
         )
         
-    from modules.google_sheets import add_new_food_to_sheet    
+from modules.google_sheets import add_new_food_to_sheet    
 
     # ------------------------------------
     # ⚙️ 管理者専用：データ入力自動化UI
