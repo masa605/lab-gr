@@ -166,11 +166,12 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         return FALLBACK_FOOD_MASTER, FALLBACK_BREED_MASTER, False
     
     
-    def add_new_food_to_sheet(new_date: list) -> bool:
-        """
-        スプレッドシートの food_master に新しいフード情報を追加します。
-            
-        """
+def add_new_food_to_sheet(new_date: list) -> bool:
+    """
+    スプレッドシートの food_master に新しいフード情報を追加します。
+    :param new_date: 追加するフードのデータリスト [brand_name, food_name, kcal_per_100g, protein_pct, fat_pct, description]
+    :return: 成功時は True, エラー時は False
+    """
     try:
         import gspread
         from google.oauth2.service_account import Credentials
@@ -229,78 +230,5 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         st.sidebar.warning(f"Google Sheets接続エラー（デモ用ローカルデータを使用中）: {e}")
         return FALLBACK_FOOD_MASTER, FALLBACK_BREED_MASTER, False
     
-
-    def add_new_food_to_sheet(new_food_data: list) -> bool:
-    """
-    Googleスプレッドシートの food_master ワークシートに新しいフード情報を追加する。
-    :param new_food_data: 追加するフードのデータリスト [brand_name, food_name, kcal_per_100g, protein_pct, fat_pct, description]
-    :return: 成功時は True, エラー時は False
-    """
-    try:
-        # 1. Secretsの準備（既存の読み込み関数からコピーしてきたロジック）
-        try:
-            service_account_info = dict(st.secrets["gcp_service_account"])
-            spreadsheet_id = st.secrets["spreadsheet_id"]
-        except Exception:
-            st.error("❌ Secretsの設定が完了していません。")
-            return False
-
-        # 2. 認証とスプレッドシートのオープン
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
-        gc = gspread.authorize(credentials)
-        sh = gc.open_by_key(spreadsheet_id)
-        worksheet = sh.worksheet("food_master")
-
-        # 3. データの追加
-        worksheet.append_row(new_food_data)
-
-        # 4. 成功通知
-        st.success("✅ 新しいフードがスプレッドシートに登録されました！")
-        return True
-
-    except Exception as e:
-        st.error(f"❌ 新規フード登録エラー: {e}")
-        return False
-
     
-def add_new_food_to_sheet(new_data: list) -> bool:
-    """
-    管理者モード用：スプレッドシートの 'food_master' の最下段に新しいデータを追記します。
-    new_data: [Brand, Product Name, Price, kcal, protein, fat, ... ] のリスト
-    """
-    
-    try:
-        import gspread
-        from google.oauth2.service_account import Credentials
-
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        
-        service_account_info = dict(st.secrets["gcp_service_account"])
-        credentials = Credentials.from_service_account_info(
-            service_account_info,
-            scopes=scopes
-        )
-        
-        gc = gspread.authorize(credentials)
-        spreadsheet_id = st.secrets["spreadsheet_id"]
-        sh = gc.open_by_key(spreadsheet_id)
-
-        # food_master 取得して最下段に追加
-        food_worksheet = sh.worksheet("food_master")
-        food_worksheet.append_row(new_data)
-        
-        # 追記成功後、Streamlitの古いキャッシュを強制消去して最新化する
-        st.cache_data.clear()
-        return True
-
-    except Exception as e:
-        st.error(f"⚠️ 書き込みエラー: {e}")
-        return False
     
