@@ -121,14 +121,14 @@ def main():
     is_blend_mode = st.sidebar.toggle("2種類のフードをブレンドする", value=False)
 
     # フード選択肢作成 (ブランド名 + フード名)
-    food_df["full_name"] = food_df["brand_name"] + " - " + food_df["food_name"]
+    food_df["full_name"] = food_df["brand"] + " - " + food_df["product_name"]
     food_list = food_df["full_name"].tolist()
 
     if not is_blend_mode:
         # 単一フードモード
         selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
         food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
-        kcal_a = float(food_a_row["kcal_per_100g"])
+        kcal_a = float(food_a_row["calories_per_100g"])
         
         st.sidebar.caption(f"エネルギー: **{kcal_a} kcal/100g**")
         if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
@@ -138,11 +138,11 @@ def main():
         # ブレンドモード
         selected_food_a_name = st.sidebar.selectbox("メインフード (フードA)", options=food_list, index=0)
         food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
-        kcal_a = float(food_a_row["kcal_per_100g"])
+        kcal_a = float(food_a_row["calories_per_100g"])
 
         selected_food_b_name = st.sidebar.selectbox("サブフード / トッピング (フードB)", options=food_list, index=1 if len(food_list) > 1 else 0)
         food_b_row = food_df[food_df["full_name"] == selected_food_b_name].iloc[0]
-        kcal_b = float(food_b_row["kcal_per_100g"])
+        kcal_b = float(food_b_row["calories_per_100g"])
 
         ratio_a_pct = st.sidebar.slider(
             "フードAの重量割合 (%)",
@@ -234,8 +234,8 @@ def main():
 
             if is_blend_mode:
                 st.markdown("---")
-                st.write(f"• **フードA ({food_a_row['food_name']})**: `{blend_res['gram_a']} g` ({blend_res['kcal_a']} kcal)")
-                st.write(f"• **フードB ({food_b_row['food_name']})**: `{blend_res['gram_b']} g` ({blend_res['kcal_b']} kcal)")
+                st.write(f"• **フードA ({food_a_row['product_name']})**: `{blend_res['gram_a']} g` ({blend_res['kcal_a']} kcal)")
+                st.write(f"• **フードB ({food_b_row['product_name']})**: `{blend_res['gram_b']} g` ({blend_res['kcal_b']} kcal)")
 
     with tab2:
         st.markdown("### 🔀 2種フードのブレンド給餌詳細")
@@ -247,9 +247,9 @@ def main():
 
             with col_b1:
                 pie_fig = render_blend_pie_chart(
-                    food_a_row['food_name'],
+                    food_a_row['product_name'],
                     blend_res['gram_a'],
-                    food_b_row['food_name'],
+                    food_b_row['product_name'],
                     blend_res['gram_b']
                 )
                 st.plotly_chart(pie_fig, use_container_width=True)
@@ -276,8 +276,8 @@ def main():
                 st.success(
                     f"**逆算結果**: 目標 `{target_kcal} kcal/100g` を達成するためのフードA割合は "
                     f"**`{calculated_ratio_a:.1f} %`** です。\n\n"
-                    f"- フードA ({food_a_row['food_name']}): **{target_blend_res['gram_a']} g**\n"
-                    f"- フードB ({food_b_row['food_name']}): **{target_blend_res['gram_b']} g**\n"
+                    f"- フードA ({food_a_row['product_name']}): **{target_blend_res['gram_a']} g**\n"
+                    f"- フードB ({food_b_row['product_name']}): **{target_blend_res['gram_b']} g**\n"
                     f"- 1日合計: **{target_blend_res['total_gram']} g**"
                 )
 

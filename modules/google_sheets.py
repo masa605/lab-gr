@@ -11,41 +11,41 @@ from typing import Tuple, Dict, Any, Optional
 # デモ用フォールバックデータ
 FALLBACK_FOOD_MASTER = pd.DataFrame([
     {
-        "brand_name": "ロイヤルカナン",
-        "food_name": "ラブラドールレトリバー 成犬・高齢犬用",
-        "kcal_per_100g": 362.0,
+        "brand": "ロイヤルカナン",
+        "product_name": "ラブラドールレトリバー 成犬・高齢犬用",
+        "calories_per_100g": 362.0,
         "protein_pct": 30.0,
         "fat_pct": 13.0,
         "description": "ラブラドールの関節・体重管理に配慮した専用フード"
     },
     {
-        "brand_name": "ヒルズ",
-        "food_name": "サイエンス・ダイエット 減量サポート 成犬用",
-        "kcal_per_100g": 317.0,
+        "brand": "ヒルズ",
+        "product_name": "サイエンス・ダイエット 減量サポート 成犬用",
+        "calories_per_100g": 317.0,
         "protein_pct": 28.5,
         "fat_pct": 11.5,
         "description": "カロリーオフで健康的かつリバウンドのない減量をサポート"
     },
     {
-        "brand_name": "ニュートロ",
-        "food_name": "ナチュラルチョイス 減量用 全犬種用 成犬用 ラム＆玄米",
-        "kcal_per_100g": 310.0,
+        "brand": "ニュートロ",
+        "product_name": "ナチュラルチョイス 減量用 全犬種用 成犬用 ラム＆玄米",
+        "calories_per_100g": 310.0,
         "protein_pct": 23.0,
         "fat_pct": 7.0,
         "description": "低脂質・低カロリーで満腹感を保つフード"
     },
     {
-        "brand_name": "アカナ (ACANA)",
-        "food_name": "ヘリテージ アダルトラージブリード",
-        "kcal_per_100g": 337.5,
+        "brand": "アカナ (ACANA)",
+        "product_name": "ヘリテージ アダルトラージブリード",
+        "calories_per_100g": 337.5,
         "protein_pct": 31.0,
         "fat_pct": 15.0,
         "description": "大型成犬用。高タンパク・低炭水化物"
     },
     {
-        "brand_name": "オリジン (ORIJEN)",
-        "food_name": "オリジナル ドッグ",
-        "kcal_per_100g": 394.0,
+        "brand": "オリジン (ORIJEN)",
+        "product_name": "オリジナル ドッグ",
+        "calories_per_100g": 394.0,
         "protein_pct": 38.0,
         "fat_pct": 18.0,
         "description": "高タンパクでアクティブなラブラドール向け"
@@ -132,8 +132,8 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         food_df = pd.DataFrame(food_records)
         
         # 数値型キャスト
-        if "kcal_per_100g" in food_df.columns:
-            food_df["kcal_per_100g"] = pd.to_numeric(food_df["kcal_per_100g"], errors="coerce")
+        if "calories_per_100g" in food_df.columns:
+            food_df["calories_per_100g"] = pd.to_numeric(food_df["calories_per_100g"], errors="coerce")
         if "protein_pct" in food_df.columns:
             food_df["protein_pct"] = pd.to_numeric(food_df["protein_pct"], errors="coerce")
         if "fat_pct" in food_df.columns:
@@ -169,7 +169,7 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
 def add_new_food_to_sheet(new_data: list) -> bool:
     """
     スプレッドシートの food_master に新しいフード情報を追加します。
-    :param new_data: 追加するフードのデータリスト [brand_name, food_name, price, kcal_per_100g, protein_pct, fat_pct]
+    :param new_data: 追加するフードのデータリスト [brand, product_name, price, calories_per_100g, protein_pct, fat_pct]
     :return: 成功時は True, エラー時は False
     """
     try:
