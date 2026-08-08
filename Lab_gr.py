@@ -121,7 +121,12 @@ def main():
     is_blend_mode = st.sidebar.toggle("2種類のフードをブレンドする", value=False)
 
     # フード選択肢作成 (ブランド名 + フード名)
-    food_df["full_name"] = food_df["brand"] + " - " + food_df["product_name"]
+    food_df["full_name"] = (
+        food_df["brand"].fillna("").astype(str) +
+        " - " + 
+        food_df["product_name"].fillna("").astype(str)
+    )
+    
     food_list = food_df["full_name"].tolist()
 
     if not is_blend_mode:
