@@ -1,6 +1,6 @@
 """
 Lab_gr.py
-愛犬ラブラドール・レトリバー「ろみ」のための給餌量計算・栄養管理 Streamlit Web アプリケーション
+# 愛犬ラブラドール・レトリバー「ろみ」のための給餌量計算・栄養管理 Streamlit Web アプリケーション
 """
 
 import streamlit as st
@@ -10,9 +10,8 @@ import pandas as pd
 from modules.calc import (
     calculate_rer,
     calculate_der,
-    calculate_food_gram,
-    calculate_blend_amounts,
-    calculate_blend_ratio_for_target
+    calculate_daily_gram,
+    calculate_blend_grams,
 )
 from modules.google_sheets import load_masters_from_sheets, add_new_food_to_sheet
 from modules.ui_helpers import (
@@ -58,8 +57,8 @@ st.markdown("""
 
 
 def main():
-    # データ読み込み
-    food_df, breed_df, is_live = load_masters_from_sheets()
+    # データ読み込み (breed_df を lifestage_df に変更)
+    food_df, lifestage_df, is_live = load_masters_from_sheets()
 
     # ヘッダー
     st.markdown('<div class="main-header">🐶 Lab_gr — 愛犬給餌量計算</div>', unsafe_allow_html=True)
@@ -70,7 +69,7 @@ def main():
     
     # ライブ接続ステータス表示
     if is_live:
-        st.caption("🟢 **Google Sheets ライブ連携中** (food_master / breed_master)")
+        st.caption("🟢 **Google Sheets ライブ連携中** (food_master / lifestage_master)")
     else:
         st.caption("ℹ️ **デモモード動作中** (ローカルマスターデータを使用中)")
 
@@ -92,8 +91,8 @@ def main():
         help="ラブラドールレトリバーの標準体重目安: 25kg〜36kg"
     )
 
-    # ライフステージ選択 (breed_dfより)
-    stage_options = breed_df["stage_name"].tolist() if "stage_name" in breed_df.columns else []
+    # ライフステージ選択 (lifestage_dfより)
+    stage_options = lifestage_df["stage_name"].tolist() if "stage_name" in lifestage_df.columns else []
     selected_stage_name = st.sidebar.selectbox(
         "ライフステージ / 状態",
         options=stage_options,
@@ -101,9 +100,9 @@ def main():
         help="生活環境や体調に応じた係数を選択してください"
     )
     
-    # 選択されたステージの係数取得
-    selected_stage_row = breed_df[breed_df["stage_name"] == selected_stage_name].iloc[0]
-    stage_factor = float(selected_stage_row["factor"])
+    # 選択されたステージの係数取得 (der_factorに変更)
+    selected_stage_row = lifestage_df[lifestage_df["stage_name"] == selected_stage_name].iloc[0]
+    stage_factor = float(selected_stage_row["der_factor"])
     st.sidebar.info(f"💡 係数: **{stage_factor:.1f}** ({selected_stage_row.get('description', '')})")
 
     meals_per_day = st.sidebar.slider(
@@ -161,11 +160,35 @@ def main():
     # ------------------------------------
     # ⚙️ 管理者専用：データ入力自動化UI
     # ------------------------------------
+    if "admin_authenticated" not in st.session_state:
+        st.session_state.admin_authenticated = False
+    
     st.sidebar.markdown("---")
-    if st.sidebar.checkbox("⚙️ 管理者モードを起動"):
-        st.subheader("📝 新規ペットフードのスピード登録")
-        st.info("ここで登録したデータは、即座にGoogleスプレッドシートの最下段に追記され、アプリにも反映されます。")
-
+    admin_mode_toggle = st.sidebar.checkbox("⚙️ 管理者モードを起動", value=st.session_state.admin_authenticated)
+    
+    if admin_mode_toggle:
+        if not st.session_state.admin_authenticated:
+            input_password = st.sidebar.text_input("管理者パスワードを入力", type="password")
+            if st.sidebar.button("認証"):
+                correct_password = st.secrets.get("admin", {}).get("password", "")
+                if input_password == correct_password and correct_password != "":
+                    st.session_state.admin_authenticated = True
+                    st.sidebar.success("✅認証成功！Adminモードを起動しました。")
+                    st.rerun()
+                else:
+                    st.sidebar.error("パスワードが正しくありません")
+        else:
+            st.sidebar.info("🔓 管理者認証済み")
+            if st.sidebar.button("ログアウト"):
+                st.session_state.admin_authenticated = False
+                st.rerun()
+    else:
+        st.session_state.admin_authenticated = False
+    
+    # ⚠️ ここがバグ修正のポイント：if文の中（管理者のみ）にフォームを移動しました
+    if st.session_state.admin_authenticated:
+        st.subheader("⚙️ 管理者専用：データ入力自動化UI")
+        
         with st.form("admin_data_entry"):
             col1, col2 = st.columns(2)
             with col1:
@@ -181,30 +204,29 @@ def main():
 
             if submit_btn:
                 if input_brand and input_product:
-                    # スプレッドシートの列順に合わせてリスト化する（※実際の列順に合わせて調整してください）
                     new_row = [input_brand, input_product, input_price, input_kcal, input_protein, input_fat]
-
                     with st.spinner("スプレッドシートへ書き込み中..."):
                         success = add_new_food_to_sheet(new_row)
-
                     if success:
                         st.success(f"✅ 「{input_product}」をマスターDBに登録しました！")
                 else:
                     st.warning("ブランド名と商品名は必須です。")
+    else:
+        st.info("※データ入力機能は管理者のみ利用可能です。")
                 
 
     # ----------------------------------------------------
-    # 計算処理実行
+    # 計算処理実行 (新関数に差し替え)
     # ----------------------------------------------------
     rer = calculate_rer(weight_kg)
     der = calculate_der(rer, stage_factor)
 
     if not is_blend_mode:
-        total_gram = calculate_food_gram(der, kcal_a)
+        total_gram = calculate_daily_gram(der, kcal_a)
         gram_per_meal = total_gram / meals_per_day
     else:
-        blend_res = calculate_blend_amounts(der, kcal_a, kcal_b, ratio_a_pct)
-        total_gram = blend_res["total_gram"]
+        gram_a, gram_b = calculate_blend_grams(der, kcal_a, kcal_b, ratio_a_pct / 100.0)
+        total_gram = gram_a + gram_b
         gram_per_meal = total_gram / meals_per_day
 
     # ----------------------------------------------------
@@ -239,8 +261,8 @@ def main():
 
             if is_blend_mode:
                 st.markdown("---")
-                st.write(f"• **フードA ({food_a_row['product_name']})**: `{blend_res['gram_a']} g` ({blend_res['kcal_a']} kcal)")
-                st.write(f"• **フードB ({food_b_row['product_name']})**: `{blend_res['gram_b']} g` ({blend_res['kcal_b']} kcal)")
+                st.write(f"• **フードA ({food_a_row['product_name']})**: `{gram_a:.1f} g`")
+                st.write(f"• **フードB ({food_b_row['product_name']})**: `{gram_b:.1f} g`")
 
     with tab2:
         st.markdown("### 🔀 2種フードのブレンド給餌詳細")
@@ -253,9 +275,9 @@ def main():
             with col_b1:
                 pie_fig = render_blend_pie_chart(
                     food_a_row['product_name'],
-                    blend_res['gram_a'],
+                    gram_a,
                     food_b_row['product_name'],
-                    blend_res['gram_b']
+                    gram_b
                 )
                 st.plotly_chart(pie_fig, use_container_width=True)
 
@@ -275,27 +297,33 @@ def main():
                     step=1.0
                 )
 
-                calculated_ratio_a = calculate_blend_ratio_for_target(kcal_a, kcal_b, target_kcal)
-                target_blend_res = calculate_blend_amounts(der, kcal_a, kcal_b, calculated_ratio_a)
+                # 逆算ロジック (関数を呼ばずにインライン計算で処理)
+                if kcal_a != kcal_b:
+                    calculated_ratio_a = (target_kcal - kcal_b) / (kcal_a - kcal_b)
+                    calculated_ratio_a = max(0.0, min(1.0, calculated_ratio_a))
+                else:
+                    calculated_ratio_a = 0.5
+                
+                target_gram_a, target_gram_b = calculate_blend_grams(der, kcal_a, kcal_b, calculated_ratio_a)
 
                 st.success(
                     f"**逆算結果**: 目標 `{target_kcal} kcal/100g` を達成するためのフードA割合は "
-                    f"**`{calculated_ratio_a:.1f} %`** です。\n\n"
-                    f"- フードA ({food_a_row['product_name']}): **{target_blend_res['gram_a']} g**\n"
-                    f"- フードB ({food_b_row['product_name']}): **{target_blend_res['gram_b']} g**\n"
-                    f"- 1日合計: **{target_blend_res['total_gram']} g**"
+                    f"**`{calculated_ratio_a * 100:.1f} %`** です。\n\n"
+                    f"- フードA ({food_a_row['product_name']}): **{target_gram_a:.1f} g**\n"
+                    f"- フードB ({food_b_row['product_name']}): **{target_gram_b:.1f} g**\n"
+                    f"- 1日合計: **{target_gram_a + target_gram_b:.1f} g**"
                 )
 
     with tab3:
-        st.markdown("### 🗂️ マスターデータ（food_master / breed_master）")
+        st.markdown("### 🗂️ マスターデータ（food_master / lifestage_master）")
         
-        tab_sub1, tab_sub2 = st.tabs(["🍖 ドッグフードマスター", "🐕 犬種・ライフステージマスター"])
+        tab_sub1, tab_sub2 = st.tabs(["🍖 ドッグフードマスター", "🐕 ライフステージマスター"])
         
         with tab_sub1:
             st.dataframe(food_df, use_container_width=True)
             
         with tab_sub2:
-            st.dataframe(breed_df, use_container_width=True)
+            st.dataframe(lifestage_df, use_container_width=True)
 
 
 if __name__ == "__main__":

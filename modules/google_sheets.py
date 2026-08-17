@@ -1,14 +1,19 @@
 """
 modules/google_sheets.py
 gspread & google-auth を用いた Google スプレッドシート連携モジュール
-st.secrets が未設定の場合はサンプルデータ (Fallback DataFrame) を返します。
+本番環境(production)ではエラー時に安全に停止し、
+開発環境(development)ではサンプルデータ(Fallback DataFrame)を返します。
 """
 
+import gspread
+import os
 import streamlit as st
 import pandas as pd
 from typing import Tuple, Dict, Any, Optional
+from google.oauth2.service_account import Credentials
+import traceback
 
-# デモ用フォールバックデータ
+# --- デモ用フォールバックデータ ---
 FALLBACK_FOOD_MASTER = pd.DataFrame([
     {
         "brand": "ロイヤルカナン",
@@ -52,40 +57,40 @@ FALLBACK_FOOD_MASTER = pd.DataFrame([
     }
 ])
 
-FALLBACK_BREED_MASTER = pd.DataFrame([
+FALLBACK_LIFESTAGE_MASTER = pd.DataFrame([
     {
         "stage_name": "避妊・去勢済み成犬",
-        "factor": 1.6,
+        "der_factor": 1.6,
         "description": "標準的な成犬の維持エネルギー (適正体重の維持)"
     },
     {
         "stage_name": "未避妊・未去勢成犬",
-        "factor": 1.8,
+        "der_factor": 1.8,
         "description": "未手術の活発な成犬用"
     },
     {
         "stage_name": "肥満傾向・減量中 (おすすめ)",
-        "factor": 1.0,
+        "der_factor": 1.0,
         "description": "ラブラドールで最も多い減量目標用 (体重コントロール)"
     },
     {
         "stage_name": "体重維持 (太りやすい体質)",
-        "factor": 1.2,
+        "der_factor": 1.2,
         "description": "太りやすい体質の成犬用維持エネルギー"
     },
     {
         "stage_name": "高齢犬 (7歳〜)",
-        "factor": 1.4,
+        "der_factor": 1.4,
         "description": "代謝速度低下に対応したシニア向け"
     },
     {
         "stage_name": "幼犬・パピー (4ヶ月未満)",
-        "factor": 3.0,
+        "der_factor": 3.0,
         "description": "急速成長期の非常に高いエネルギー要求"
     },
     {
         "stage_name": "幼犬・パピー (4ヶ月〜成犬)",
-        "factor": 2.0,
+        "der_factor": 2.0,
         "description": "離乳後から骨格が完成するまでの成長期"
     }
 ])
@@ -94,23 +99,25 @@ FALLBACK_BREED_MASTER = pd.DataFrame([
 @st.cache_data(ttl=600)
 def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
     """
-    Googleスプレッドシートから food_master および breed_master を読み込みます。
-    secretsが設定されていないか認証失敗時はフォールバックデータを返します。
-
-    :return: (food_master_df, breed_master_df, is_live_connection)
+    Googleスプレッドシートから food_master と lifestage_master を読み込みます。
+    本番環境(production)で接続失敗した場合はエラーを発生させて停止します。
     """
+    env = st.secrets.get("ENVIRONMENT", "development")
+
     # Secrets チェック
     try:
         if "gcp_service_account" not in st.secrets or "spreadsheet_id" not in st.secrets:
-            return FALLBACK_FOOD_MASTER, FALLBACK_BREED_MASTER, False
+            if env == "production":
+                st.error("🚨 【本番エラー】Google Sheets APIの認証情報が設定されていません。")
+                st.stop()
+            return FALLBACK_FOOD_MASTER, FALLBACK_LIFESTAGE_MASTER, False
     except Exception:
-        # secrets.toml が存在しないか読み込めない場合はフォールバック
-        return FALLBACK_FOOD_MASTER, FALLBACK_BREED_MASTER, False
+        if env == "production":
+            st.error("🚨 【本番エラー】secrets.toml が読み込めません。")
+            st.stop()
+        return FALLBACK_FOOD_MASTER, FALLBACK_LIFESTAGE_MASTER, False
 
     try:
-        import gspread
-        from google.oauth2.service_account import Credentials
-
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets.readonly",
             "https://www.googleapis.com/auth/drive.readonly"
@@ -139,43 +146,34 @@ def load_masters_from_sheets() -> Tuple[pd.DataFrame, pd.DataFrame, bool]:
         if "fat_pct" in food_df.columns:
             food_df["fat_pct"] = pd.to_numeric(food_df["fat_pct"], errors="coerce")
 
-        # breed_master 取得
-        breed_worksheet = sh.worksheet("breed_master")
-        breed_records = breed_worksheet.get_all_records()
-        breed_df = pd.DataFrame(breed_records)
-        if "factor" in breed_df.columns:
-            breed_df["factor"] = pd.to_numeric(breed_df["factor"], errors="coerce")
+        # lifestage_master 取得
+        lifestage_worksheet = sh.worksheet("lifestage_master")
+        lifestage_records = lifestage_worksheet.get_all_records()
+        lifestage_df = pd.DataFrame(lifestage_records)
+        
+        if "der_factor" in lifestage_df.columns:
+            lifestage_df["der_factor"] = pd.to_numeric(lifestage_df["der_factor"], errors="coerce")
             
-            #成功した証拠を画面に出す
-            st.success("✅ スプレッドシートからのデータ読み込みに成功しました！")
-
-
-        return food_df, breed_df, True
+        st.success("✅ スプレッドシートからのデータ読み込みに成功しました！")
+        return food_df, lifestage_df, True
 
     except Exception as e:
-        import traceback
-        # 画面にはエラーの詳細ではなく、「種類（名前）だけを出す
-        st.error(f" ⚠️　スプレッドシート通信エラーの種類: {type(e).__name__}")
-        
-        # 裏側の黒い画面に全ての原因を吐き出す
-        # print("🔥🔥🔥 エラー詳細🔥🔥🔥")
-        # print(traceback.format_exc())
-        
-        # エラー発生時はメッセージをスタックせずにフォールバックを返す
-        st.sidebar.warning(f"Google Sheets接続エラー（デモ用ローカルデータを使用中）: {e}")
-        return FALLBACK_FOOD_MASTER, FALLBACK_BREED_MASTER, False
+        if env == "production":
+            # 本番環境では完全に停止させる
+            st.error(f"🚨 【本番エラー】Google Sheetsとの連携に失敗しました: {e}")
+            st.stop()
+        else:
+            # 開発環境ではフォールバックに逃がす
+            st.error(f"⚠️ スプレッドシート通信エラーの種類: {type(e).__name__}")
+            st.sidebar.warning(f"Google Sheets接続エラー（デモ用ローカルデータを使用中）: {e}")
+            return FALLBACK_FOOD_MASTER, FALLBACK_LIFESTAGE_MASTER, False
     
     
 def add_new_food_to_sheet(new_data: list) -> bool:
     """
     スプレッドシートの food_master に新しいフード情報を追加します。
-    :param new_data: 追加するフードのデータリスト [brand, product_name, price, calories_per_100g, protein_pct, fat_pct]
-    :return: 成功時は True, エラー時は False
     """
     try:
-        import gspread
-        from google.oauth2.service_account import Credentials
-        
         scopes = [
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
@@ -204,9 +202,5 @@ def add_new_food_to_sheet(new_data: list) -> bool:
         return True
 
     except Exception as e:
-        st.error(f" ⚠️ スプレッドシート書き込みエラー: {e}")
+        st.error(f"⚠️ スプレッドシート書き込みエラー: {e}")
         return False
-
-    
-    
-    
