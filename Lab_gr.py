@@ -121,7 +121,7 @@ def main():
 
     # フード選択肢作成 (ブランド名 + フード名)
     food_df["full_name"] = (
-        food_df["brand"].fillna("").astype(str) +
+        food_df["brand_name"].fillna("").astype(str) +
         " - " + 
         food_df["product_name"].fillna("").astype(str)
     )
@@ -192,7 +192,7 @@ def main():
         with st.form("admin_data_entry"):
             col1, col2 = st.columns(2)
             with col1:
-                input_brand = st.text_input("ブランド名 (Brand)", placeholder="例: Royal Canin")
+                input_brand_name = st.text_input("ブランド名 (Brand)", placeholder="例: Royal Canin")
                 input_product = st.text_input("商品名 (Product Name)", placeholder="例: 消化器サポート")
                 input_price = st.number_input("価格 (Price)", min_value=0, value=0)
             with col2:
@@ -203,8 +203,8 @@ def main():
             submit_btn = st.form_submit_button("🚀 スプレッドシートに登録")
 
             if submit_btn:
-                if input_brand and input_product:
-                    new_row = [input_brand, input_product, input_price, input_kcal, input_protein, input_fat]
+                if input_brand_name and input_product:
+                    new_row = [input_brand_neme, input_product, input_price, input_kcal, input_protein, input_fat]
                     with st.spinner("スプレッドシートへ書き込み中..."):
                         success = add_new_food_to_sheet(new_row)
                     if success:
