@@ -92,8 +92,8 @@ def main():
     )
 
     # ライフステージ選択 (lifestage_dfより)
-    stage_options = lifestage_df["stage_name"].tolist() if "stage_name" in lifestage_df.columns else []
-    selected_stage_name = st.sidebar.selectbox(
+    stage_options = lifestage_df["lifestage"].tolist() if "lifestage" in lifestage_df.columns else []
+    selected_lifestage = st.sidebar.selectbox(
         "ライフステージ / 状態",
         options=stage_options,
         index=2 if len(stage_options) > 2 else 0, # デフォルト「肥満傾向・減量中」
@@ -101,7 +101,7 @@ def main():
     )
     
     # 選択されたステージの係数取得 (der_factorに変更)
-    selected_stage_row = lifestage_df[lifestage_df["stage_name"] == selected_stage_name].iloc[0]
+    selected_stage_row = lifestage_df[lifestage_df["lifestage"] == selected_lifestage].iloc[0]
     stage_factor = float(selected_stage_row["der_factor"])
     st.sidebar.info(f"💡 係数: **{stage_factor:.1f}** ({selected_stage_row.get('description', '')})")
 
@@ -253,7 +253,7 @@ def main():
         with col_right:
             st.markdown("#### 📋 1日あたりの給餌サマリー")
             st.write(f"- **対象愛犬**: {dog_name} (体重 {weight_kg} kg)")
-            st.write(f"- **選択ライフステージ**: {selected_stage_name}")
+            st.write(f"- **選択ライフステージ**: {selected_lifestage}")
             st.write(f"- **安静時エネルギー要求量 (RER)**: `{rer:.1f} kcal/日`")
             st.write(f"- **1日必要エネルギー量 (DER)**: `{der:.1f} kcal/日`")
             st.write(f"- **1日合計推奨給餌量**: **`{total_gram:.1f} g`**")
