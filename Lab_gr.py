@@ -75,6 +75,27 @@ def main():
 
     render_disclaimer()
     st.markdown("---")
+    
+    # ----------------------------------------------------
+    # 🔑 アカウント認証（プレミアム会員用）
+    # ----------------------------------------------------
+    st.sidebar.subheader("🔑 アカウント")
+    user_email = st.sidebar.text_input("メールアドレス", placeholder="プレミアム会員の方はこちら")
+
+    # プレミアム判定フラグ（初期値は False = 無料ユーザー）
+    is_premium = False
+    
+    if user_email:
+        # 【TODO】後でここで premium_users シートと照合します。
+        # まずはテストとして、マスターのアドレスを入れた時だけ True になるように仮組みします。
+        if user_email == "master@example.com": # 先ほどシートに入れたテスト用アドレス
+            is_premium = True
+            st.sidebar.success("✨ プレミアム会員として認証されました！")
+        else:
+            st.sidebar.error("有効なプレミアム会員ではありません。")
+            
+         
+            
 
     # ----------------------------------------------------
     # サイドバー: プロフィール＆フード設定
@@ -119,10 +140,12 @@ def main():
     # フードブレンド切り替え
     is_blend_mode = st.sidebar.toggle("2種類のフードをブレンドする", value=False)
     
+    
+    
     # ここから新規追加 (フェイクドア)
 
     # 顧客がまだプレミアム会員でない場合
-    if is_blend_mode:
+    if is_blend_mode and not is_premium:
         # フェイクドアの追加（サイドバーに表示させる）
         st.warning("🔒 2種ブレンド計算はプレミアム版（月額500円）限定機能です。")
         st.info("毎日の面倒なトッピング計算や、療法食の細かなカロリー比率調整を一瞬で終わらせることができます。")
