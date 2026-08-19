@@ -146,15 +146,14 @@ def main():
     
     food_list = food_df["full_name"].tolist()
 
-    if not is_blend_mode:
-        # 単一フードモード
-        selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
-        food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
-        kcal_a = float(food_a_row["calories_per_100g"])
+    # 単一フードモード
+    selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
+    food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
+    kcal_a = float(food_a_row["calories_per_100g"])
         
-        st.sidebar.caption(f"エネルギー: **{kcal_a} kcal/100g**")
-        if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
-            st.sidebar.caption(f"タンパク質: {food_a_row['protein_pct']}% / 脂質: {food_a_row['fat_pct']}%")
+    st.sidebar.caption(f"エネルギー: **{kcal_a} kcal/100g**")
+    if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
+        st.sidebar.caption(f"タンパク質: {food_a_row['protein_pct']}% / 脂質: {food_a_row['fat_pct']}%")
 
     else:
         # ※ 元々あった `else: # ブレンドモード` のブロックは、
