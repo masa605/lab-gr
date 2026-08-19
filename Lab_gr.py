@@ -222,7 +222,7 @@ def main():
     st.sidebar.captionn("高度なブレンド逆算やデータの保存機能を利用するには、プレミアムプラン（月額500円）への登録が必要です。)
                         
     # マスターが取得したtest_ から始まるStripeのURLに際変えて下さい
-    stripe_payment_link = "https://buy.stripe.com/test_eVq14meRz8nud5t29adZ600"
+    stripe_url = "https://buy.stripe.com/test_eVq14meRz8nud5t29adZ600"
     
     st.sidebar.link_button("プレミアム機能を開放する", stripe_payment_link, type="primary")
     
