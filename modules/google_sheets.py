@@ -204,3 +204,21 @@ def add_new_food_to_sheet(new_data: list) -> bool:
     except Exception as e:
         st.error(f"⚠️ スプレッドシート書き込みエラー: {e}")
         return False
+
+    
+@st.cache_data(ttl=60)
+def load_premium_users():
+    """
+    課金ユーザーのリスト（email, status）を取得する
+    """
+    try:
+        conn = connect_to_sheets()
+        # premium_users シートを読み込む
+        df = conn.read(worksheet="premium_users", usecols=[0, 1])
+        return df
+    except Exception as e:
+        st.error(f"プレミアムユーザー情報の取得に失敗しました: {e}")
+        st.stop()
+        
+        
+           

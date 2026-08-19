@@ -21,6 +21,10 @@ from modules.ui_helpers import (
     render_blend_pie_chart
 )
 
+# 
+from google_sheets import load_foodmaster, load_lifestage_master, load_premium_users
+
+
 # 1. ページ基本設定
 st.set_page_config(
     page_title="Lab_gr - ラブラドール給餌量計算",
@@ -76,6 +80,11 @@ def main():
     render_disclaimer()
     st.markdown("---")
     
+    # マスターデータを読み込む
+    food_df = load_food_master()
+    lifestage_df = load_lifestage_master()
+    premium_users_df = load_premium_users()
+    
     # ----------------------------------------------------
     # 🔑 アカウント認証（プレミアム会員用）
     # ----------------------------------------------------
@@ -86,16 +95,21 @@ def main():
     is_premium = False
     
     if user_email:
-        # 【TODO】後でここで premium_users シートと照合します。
-        # まずはテストとして、マスターのアドレスを入れた時だけ True になるように仮組みします。
-        if user_email == "master@example.com": # 先ほどシートに入れたテスト用アドレス
-            is_premium = True
-            st.sidebar.success("✨ プレミアム会員として認証されました！")
+        # 入力されたメールアドレスがデータベースに存在するか検索
+        user_record = premium_users_df[premium_users_df["email"] == user_email]
+        
+        if not user_record.empty:
+            # ユーザーがPremiumDB内に存在した場合、ステータスが'active' かどうかを確認する
+            status = user_record.iloc[0]['status']
+            if status == "active":
+                is_premium = True
+                st.sidebar.success("✨ プレミアム会員として認証されました！")
+            else:
+                st.sidebar.error("有効なプレミアム会員ではありません。（ステータスが無効です。）")
         else:
-            st.sidebar.error("有効なプレミアム会員ではありません。")
+            st.sidebar.error("登録されていないメールアドレスです。（新規登録をお願いします。）")
             
          
-            
 
     # ----------------------------------------------------
     # サイドバー: プロフィール＆フード設定
