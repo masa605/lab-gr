@@ -164,10 +164,10 @@ def main():
         # ※ 実際の計算ロジック（kcalの加重平均計算など）は、
         #   元のコードの `else:` ブロックにあったものをここに移動・統合して実装します。
     
-    # 例：単純な選択肢の表示だけ（本番ではここに計算式が入る）
-    selected_food_a_name = st.sidebar.selectbox("メインフード (フードA)", options=food_list, index=0)
-    food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
-    kcal_a = float(food_a_row["calories_per_100g"])
+        # 例：単純な選択肢の表示だけ（本番ではここに計算式が入る）
+        selected_food_a_name = st.sidebar.selectbox("メインフード (フードA)", options=food_list, index=0)
+        food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
+        kcal_a = float(food_a_row["calories_per_100g"])
 
         selected_food_b_name = st.sidebar.selectbox("サブフード / トッピング (フードB)", options=food_list, index=1 if len(food_list) > 1 else 0)
         food_b_row = food_df[food_df["full_name"] == selected_food_b_name].iloc[0]
