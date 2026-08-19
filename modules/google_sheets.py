@@ -206,19 +206,48 @@ def add_new_food_to_sheet(new_data: list) -> bool:
         return False
 
     
+FALLBACK_PREMIUM_USERS = pd.DataFrame([
+    {
+        "email": "master@example.com",
+        "status": "active"
+    }
+])
+
 @st.cache_data(ttl=60)
-def load_premium_users():
+def load_premium_users() -> pd.DataFrame:
     """
     課金ユーザーのリスト（email, status）を取得する
     """
+    env = st.secrets.get("ENVIRONMENT", "development")
+
     try:
-        conn = connect_to_sheets()
-        # premium_users シートを読み込む
-        df = conn.read(worksheet="premium_users", usecols=[0, 1])
+        if "gcp_service_account" not in st.secrets or "spreadsheet_id" not in st.secrets:
+            return FALLBACK_PREMIUM_USERS
+
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets.readonly",
+            "https://www.googleapis.com/auth/drive.readonly"
+        ]
+        
+        service_account_info = dict(st.secrets["gcp_service_account"])
+        credentials = Credentials.from_service_account_info(
+            service_account_info,
+            scopes=scopes
+        )
+        
+        gc = gspread.authorize(credentials)
+        spreadsheet_id = st.secrets["spreadsheet_id"]
+        sh = gc.open_by_key(spreadsheet_id)
+
+        worksheet = sh.worksheet("premium_users")
+        records = worksheet.get_all_records()
+        df = pd.DataFrame(records)
+        if df.empty or "email" not in df.columns:
+            return FALLBACK_PREMIUM_USERS
         return df
+
     except Exception as e:
-        st.error(f"プレミアムユーザー情報の取得に失敗しました: {e}")
-        st.stop()
-        
-        
-           
+        if env == "production":
+            st.sidebar.warning(f"プレミアムユーザー情報の取得に失敗しました (デモデータを使用): {e}")
+        return FALLBACK_PREMIUM_USERS
+

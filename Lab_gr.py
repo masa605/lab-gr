@@ -13,16 +13,17 @@ from modules.calc import (
     calculate_daily_gram,
     calculate_blend_grams,
 )
-from modules.google_sheets import load_masters_from_sheets, add_new_food_to_sheet
+from modules.google_sheets import (
+    load_masters_from_sheets,
+    add_new_food_to_sheet,
+    load_premium_users,
+)
 from modules.ui_helpers import (
     render_disclaimer,
     render_kpi_metrics,
     render_calorie_gauge,
     render_blend_pie_chart
 )
-
-# 
-from modules.google_sheets import load_foodmaster, load_lifestage_master, load_premium_users
 
 
 # 1. ページ基本設定
@@ -80,9 +81,7 @@ def main():
     render_disclaimer()
     st.markdown("---")
     
-    # マスターデータを読み込む
-    food_df = load_food_master()
-    lifestage_df = load_lifestage_master()
+    # プレミアムユーザーデータを読み込む
     premium_users_df = load_premium_users()
     
     # ----------------------------------------------------
@@ -127,7 +126,8 @@ def main():
     )
 
     # ライフステージ選択 (lifestage_dfより)
-    stage_options = lifestage_df["lifestage"].tolist() if "lifestage" in lifestage_df.columns else []
+    stage_col = "lifestage" if "lifestage" in lifestage_df.columns else ("stage_name" if "stage_name" in lifestage_df.columns else lifestage_df.columns[0])
+    stage_options = lifestage_df[stage_col].tolist() if stage_col in lifestage_df.columns else []
     selected_lifestage = st.sidebar.selectbox(
         "ライフステージ / 状態",
         options=stage_options,
@@ -136,7 +136,7 @@ def main():
     )
     
     # 選択されたステージの係数取得 (der_factorに変更)
-    selected_stage_row = lifestage_df[lifestage_df["lifestage"] == selected_lifestage].iloc[0]
+    selected_stage_row = lifestage_df[lifestage_df[stage_col] == selected_lifestage].iloc[0]
     stage_factor = float(selected_stage_row["der_factor"])
     st.sidebar.info(f"💡 係数: **{stage_factor:.1f}** ({selected_stage_row.get('description', '')})")
 
@@ -175,8 +175,9 @@ def main():
     # --- ここから下は「単一フードモード（無料版）としてそのまま実行される ---
 
     # フード選択肢作成 (ブランド名 + フード名)
+    brand_col = "brand_name" if "brand_name" in food_df.columns else ("brand" if "brand" in food_df.columns else food_df.columns[0])
     food_df["full_name"] = (
-        food_df["brand_name"].fillna("").astype(str) +
+        food_df[brand_col].fillna("").astype(str) +
         " - " + 
         food_df["product_name"].fillna("").astype(str)
     )
@@ -265,7 +266,7 @@ def main():
 
             if submit_btn:
                 if input_brand_name and input_product:
-                    new_row = [input_brand_neme, input_product, input_price, input_kcal, input_protein, input_fat]
+                    new_row = [input_brand_name, input_product, input_price, input_kcal, input_protein, input_fat]
                     with st.spinner("スプレッドシートへ書き込み中..."):
                         success = add_new_food_to_sheet(new_row)
                     if success:
