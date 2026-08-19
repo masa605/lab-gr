@@ -219,7 +219,7 @@ def main():
     # ----------------------------------------------------
     st.sidebar.markdown("---")
     st.sidebar.subheader("👑 プレミア版へのアップグレード")
-    st.sidebar.captionn("高度なブレンド逆算やデータの保存機能を利用するには、プレミアムプラン（月額500円）への登録が必要です。")
+    st.sidebar.caption("高度なブレンド逆算やデータの保存機能を利用するには、プレミアムプラン（月額500円）への登録が必要です。")
                         
     # マスターが取得したtest_ から始まるStripeのURLに際変えて下さい
     stripe_url = "https://buy.stripe.com/test_eVq14meRz8nud5t29adZ600"
