@@ -22,7 +22,7 @@ from modules.ui_helpers import (
 )
 
 # 
-from google_sheets import load_foodmaster, load_lifestage_master, load_premium_users
+from modules.google_sheets import load_foodmaster, load_lifestage_master, load_premium_users
 
 
 # 1. ページ基本設定
