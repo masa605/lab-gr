@@ -184,22 +184,22 @@ def main():
     
     food_list = food_df["full_name"].tolist()
 
-        # ---単一フードモード（メインフードの処理）---
-        selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
-        food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
-        kcal_a = float(food_a_row["calories_per_100g"])
+    # ---単一フードモード（メインフードの処理）---
+    selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
+    food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
+    kcal_a = float(food_a_row["calories_per_100g"])
             
-        st.sidebar.caption(f"エネルギー: **{kcal_a} kcal/100g**")
-        if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
-            st.sidebar.caption(f"タンパク質: {food_a_row['protein_pct']}% / 脂質: {food_a_row['fat_pct']}%")
+    st.sidebar.caption(f"エネルギー: **{kcal_a} kcal/100g**")
+    if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
+        st.sidebar.caption(f"タンパク質: {food_a_row['protein_pct']}% / 脂質: {food_a_row['fat_pct']}%")
     
-        # --- ブレンドモード（フードA・フードBの処理）---
-        if is_blend_mode:
-            selected_food_b_name = st.sidebar.selectbox("サブフード / トッピング (フードB)", options=food_list, index=1 if len(food_list) > 1 else 0)
-            food_b_row = food_df[food_df["full_name"] == selected_food_b_name].iloc[0]
-            kcal_b = float(food_b_row["calories_per_100g"])
+    # --- ブレンドモード（フードA・フードBの処理）---
+    if is_blend_mode:
+        selected_food_b_name = st.sidebar.selectbox("サブフード / トッピング (フードB)", options=food_list, index=1 if len(food_list) > 1 else 0)
+        food_b_row = food_df[food_df["full_name"] == selected_food_b_name].iloc[0]
+        kcal_b = float(food_b_row["calories_per_100g"])
 
-            ratio_a_pct = st.sidebar.slider(
+        ratio_a_pct = st.sidebar.slider(
                 "フードAの重量割合 (%)",
                 min_value=0,
                 max_value=100,
