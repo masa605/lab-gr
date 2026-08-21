@@ -167,6 +167,10 @@ def main():
         # Stripe リンク
         stripe_url = "https://buy.stripe.com/test_eVq14meRz8nud5t29adZ600"
         st.sidebar.link_button("プレミアム機能を開放する", stripe_url, type="primary")
+        
+        # 
+        st.sidebar.caption("💡 決済完了後、メールアドレス欄でもう一度Enterを押すとロックが解除されます。")
+        
     
         st.stop() # 🛑 処理をここで強制終了し、これより下の計算UIを表示させない
     # --- フェイクドアここまで ---
