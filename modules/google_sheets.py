@@ -213,41 +213,28 @@ FALLBACK_PREMIUM_USERS = pd.DataFrame([
     }
 ])
 
-@st.cache_data(ttl=60)
-def load_premium_users() -> pd.DataFrame:
+@st.cache_data(ttl=60, show_spinner=False)
+def load_premium_users():
     """
     課金ユーザーのリスト（email, status）を取得する
     """
-    env = st.secrets.get("ENVIRONMENT", "development")
-
+    # エラー時は空のDataFrame（全員未課金扱い）を返す準備
+    import pandas as pd
+    empty_df = pd.DataFrame(columns=["email", "status"])
+        
     try:
-        if "gcp_service_account" not in st.secrets or "spreadsheet_id" not in st.secrets:
-            return FALLBACK_PREMIUM_USERS
-
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets.readonly",
-            "https://www.googleapis.com/auth/drive.readonly"
-        ]
+        conn = connect_to_sheets()
+        df = conn.read(worksheet="premium_users", usecols=[0, 1])
         
-        service_account_info = dict(st.secrets["gcp_service_account"])
-        credentials = Credentials.from_service_account_info(
-            service_account_info,
-            scopes=scopes
-        )
+        # 採点減のスキーマ（列）チェック
+        if not {"email", "status"}.issubset(df.columns):
+            return empty_df
         
-        gc = gspread.authorize(credentials)
-        spreadsheet_id = st.secrets["spreadsheet_id"]
-        sh = gc.open_by_key(spreadsheet_id)
-
-        worksheet = sh.worksheet("premium_users")
-        records = worksheet.get_all_records()
-        df = pd.DataFrame(records)
-        if df.empty or "email" not in df.columns:
-            return FALLBACK_PREMIUM_USERS
         return df
-
     except Exception as e:
-        if env == "production":
-            st.sidebar.warning(f"プレミアムユーザー情報の取得に失敗しました (デモデータを使用): {e}")
-        return FALLBACK_PREMIUM_USERS
+        # エラー詳細を画面に出さず、裏側で握りつぶして無料盤として続行させる
+        print(f"プレミアムユーザー情報の取得敗エラ: {e}")
+        
+        return empty_df
+    
 

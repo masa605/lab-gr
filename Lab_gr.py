@@ -184,7 +184,7 @@ def main():
     
     food_list = food_df["full_name"].tolist()
 
-    # 単一フードモード
+    # ---単一フードモード（メインフードの処理　---
     selected_food_a_name = st.sidebar.selectbox("メインフード", options=food_list, index=0)
     food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
     kcal_a = float(food_a_row["calories_per_100g"])
@@ -193,15 +193,9 @@ def main():
     if "protein_pct" in food_a_row and pd.notna(food_a_row["protein_pct"]):
         st.sidebar.caption(f"タンパク質: {food_a_row['protein_pct']}% / 脂質: {food_a_row['fat_pct']}%")
 
-    else:
-        # ※ 元々あった `else: # ブレンドモード` のブロックは、
-        # 上の st.stop() によって絶対に到達しなくなるため、削除するかそのまま放置でOKです。
     
-        # --- 新規追加：本来の「ブレンド計算」ロジックここから ---
-        # ※ 実際の計算ロジック（kcalの加重平均計算など）は、
-        #   元のコードの `else:` ブロックにあったものをここに移動・統合して実装します。
-    
-        # 例：単純な選択肢の表示だけ（本番ではここに計算式が入る）
+        # --- ⬇️ ここから下を独立した if is_blend_mode: ブロックにする ---
+        if is_blend_mode:
         selected_food_a_name = st.sidebar.selectbox("メインフード (フードA)", options=food_list, index=0)
         food_a_row = food_df[food_df["full_name"] == selected_food_a_name].iloc[0]
         kcal_a = float(food_a_row["calories_per_100g"])
